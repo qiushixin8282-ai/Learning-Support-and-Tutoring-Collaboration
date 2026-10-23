@@ -1,0 +1,20 @@
+[
+  {
+    "request_id": "SIM-001",
+    "learner_region": "CN",
+    "topic": "课程作业反馈",
+    "rule_version": "2026.10",
+    "consent_confirmed": true,
+    "requester_role": "助教",
+    "assigned_owner": "课程讲师"
+  },
+  {
+    "request_id": "SIM-002",
+    "learner_region": "CN",
+    "topic": "学习进度异常",
+    "rule_version": "2026.09",
+    "consent_confirmed": false,
+    "requester_role": "课程运营员",
+    "assigned_owner": null
+  }
+]

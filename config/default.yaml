@@ -1,0 +1,4 @@
+required_rule_version: "2026.10"
+manual_review_owner: "学习服务主任"
+audit_retention_days: 90
+notes: "训练配置；上线前须由业务、数据与安全负责人共同确认。"
