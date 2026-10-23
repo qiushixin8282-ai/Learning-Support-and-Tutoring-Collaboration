@@ -16,9 +16,6 @@ def transition(task: SupportTask, target: TaskStatus, *, actor: str, reason: str
     """Move a task only through the workflow shown in the process diagrams."""
     if target not in ALLOWED_TRANSITIONS[task.status]:
         raise ValueError(f"不允许从 {task.status} 直接流转到 {target}")
-    if target == "published" and task.version < 1:
-        raise ValueError("发布前必须存在经复核的版本")
-
     if target == "published":
         task.version += 1
     task.audit_events.append(

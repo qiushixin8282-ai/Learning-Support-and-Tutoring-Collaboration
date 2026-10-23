@@ -14,6 +14,7 @@ python -m venv .venv
 pip install -r requirements.txt
 pip install -e .
 python -m learning_support_collab.main --demo
+python -m learning_support_collab.main --lifecycle-demo
 python -m unittest discover -s tests -v
 ```
 
