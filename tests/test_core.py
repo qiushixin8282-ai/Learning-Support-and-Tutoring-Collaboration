@@ -1,6 +1,8 @@
 import unittest
 
 from learning_support_collab.core.models import SupportRequest
+from learning_support_collab.core.models import SupportTask
+from learning_support_collab.core.lifecycle import transition
 from learning_support_collab.core.workflow import evaluate_request
 
 
@@ -17,6 +19,22 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(result.decision, "needs_human_review")
         self.assertEqual(result.next_owner, "学习服务主任")
         self.assertGreaterEqual(len(result.reasons), 3)
+
+    def test_task_can_be_reviewed_published_and_handed_off(self):
+        task = SupportTask("T-1", "课程讲师")
+        transition(task, "assigned", actor="学习服务主任")
+        transition(task, "drafted", actor="课程讲师")
+        transition(task, "under_review", actor="课程运营员")
+        task.version = 1
+        transition(task, "published", actor="课程运营员", reason="复核通过")
+        transition(task, "handed_off", actor="平台工程师")
+        self.assertEqual(task.status, "handed_off")
+        self.assertEqual(task.version, 2)
+
+    def test_task_cannot_skip_review(self):
+        task = SupportTask("T-2", "课程讲师")
+        with self.assertRaises(ValueError):
+            transition(task, "published", actor="课程讲师")
 
 
 if __name__ == "__main__":
