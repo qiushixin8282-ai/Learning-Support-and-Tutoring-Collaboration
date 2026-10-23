@@ -31,4 +31,4 @@ python -m unittest discover -s tests -v
 - 没有授权、规则版本或责任人时，结果为 `needs_human_review`。
 - 指标、ROI 与试点结论均为待验证的训练假设，不能当作生产收益。
 
-详见 [设计说明](docs/design.md)、[接口说明](docs/api.md)、[FDE 交付包](docs/fde-delivery.md)、[行业分析报告](docs/学习支持与辅导协作行业分析报告.docx)、[现状流程图](docs/现状流程图.svg)、[转型后流程图](docs/数智化转型后流程图.svg)、[设计方案](docs/设计方案.md) 和 [报价单](docs/报价单.md)。
+详见 [设计说明](docs/design.md)、[接口说明](docs/api.md)、[FDE 交付包](docs/fde-delivery.md)、[项目推荐书](docs/项目推荐书.md)、[行业分析报告](docs/学习支持与辅导协作行业分析报告.docx)、[现状流程图](docs/现状流程图.svg)、[转型后流程图](docs/数智化转型后流程图.svg)、[设计方案](docs/设计方案.md) 和 [报价单](docs/报价单.md)。
