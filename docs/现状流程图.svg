@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420">
+  <style>text{font-family:'Microsoft YaHei',Arial,sans-serif;fill:#172033}.title{font-size:28px;font-weight:700}.label{font-size:18px;font-weight:600}.small{font-size:14px;fill:#576174}.box{fill:#F7F9FC;stroke:#7D8CA3;stroke-width:2}.risk{fill:#FFF3E8;stroke:#E38B38;stroke-width:2}.arrow{stroke:#53657D;stroke-width:3;fill:none;marker-end:url(#arrow)}</style>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#53657D"/></marker></defs>
+  <text x="60" y="55" class="title">学习支持与辅导协作 现状流程</text>
+  <text x="60" y="88" class="small">多渠道进入、人工核对和非结构化交接导致信息缺失与返工</text>
+  <rect x="60" y="150" width="170" height="86" rx="12" class="box"/><text x="145" y="185" text-anchor="middle" class="label">学生或助教</text><text x="145" y="210" text-anchor="middle" class="small">微信 邮件 表单</text>
+  <rect x="300" y="150" width="170" height="86" rx="12" class="risk"/><text x="385" y="185" text-anchor="middle" class="label">人工分拣</text><text x="385" y="210" text-anchor="middle" class="small">信息重复录入</text>
+  <rect x="540" y="150" width="170" height="86" rx="12" class="risk"/><text x="625" y="185" text-anchor="middle" class="label">规则核对</text><text x="625" y="210" text-anchor="middle" class="small">版本依赖个人经验</text>
+  <rect x="780" y="150" width="170" height="86" rx="12" class="risk"/><text x="865" y="185" text-anchor="middle" class="label">跨角色交接</text><text x="865" y="210" text-anchor="middle" class="small">责任与状态不清</text>
+  <rect x="1020" y="150" width="140" height="86" rx="12" class="box"/><text x="1090" y="185" text-anchor="middle" class="label">答复与记录</text><text x="1090" y="210" text-anchor="middle" class="small">难以复盘</text>
+  <path d="M230 193H300 M470 193H540 M710 193H780 M950 193H1020" class="arrow"/>
+  <text x="385" y="290" text-anchor="middle" class="small">风险：遗漏、延迟、重复</text><text x="625" y="320" text-anchor="middle" class="small">风险：错误版本与越权处理</text><text x="865" y="290" text-anchor="middle" class="small">风险：返工与体验不一致</text>
+</svg>

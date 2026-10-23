@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="460" viewBox="0 0 1200 460">
+  <style>text{font-family:'Microsoft YaHei',Arial,sans-serif;fill:#172033}.title{font-size:28px;font-weight:700}.label{font-size:18px;font-weight:600}.small{font-size:14px;fill:#576174}.box{fill:#F4F8FF;stroke:#4377B8;stroke-width:2}.gate{fill:#EAF7EF;stroke:#2E9360;stroke-width:2}.review{fill:#FFF3E8;stroke:#E38B38;stroke-width:2}.arrow{stroke:#53657D;stroke-width:3;fill:none;marker-end:url(#arrow)}</style>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#53657D"/></marker></defs>
+  <text x="60" y="55" class="title">学习支持与辅导协作 数智化转型后流程</text>
+  <text x="60" y="88" class="small">结构化任务、规则硬校验、人工兜底和全程审计</text>
+  <rect x="45" y="165" width="145" height="86" rx="12" class="box"/><text x="118" y="199" text-anchor="middle" class="label">统一服务入口</text><text x="118" y="224" text-anchor="middle" class="small">表单或接口</text>
+  <rect x="245" y="165" width="160" height="86" rx="12" class="box"/><text x="325" y="199" text-anchor="middle" class="label">任务结构化</text><text x="325" y="224" text-anchor="middle" class="small">ID 主题 区域</text>
+  <polygon points="515,150 590,208 515,266 440,208" class="gate"/><text x="515" y="203" text-anchor="middle" class="label">控制校验</text><text x="515" y="224" text-anchor="middle" class="small">授权 版本 责任人</text>
+  <rect x="680" y="165" width="160" height="86" rx="12" class="box"/><text x="760" y="199" text-anchor="middle" class="label">具名任务分派</text><text x="760" y="224" text-anchor="middle" class="small">课程讲师或助教</text>
+  <rect x="900" y="165" width="140" height="86" rx="12" class="box"/><text x="970" y="199" text-anchor="middle" class="label">处理与反馈</text><text x="970" y="224" text-anchor="middle" class="small">状态可见</text>
+  <rect x="1065" y="165" width="105" height="86" rx="12" class="box"/><text x="1118" y="199" text-anchor="middle" class="label">审计</text><text x="1118" y="224" text-anchor="middle" class="small">可复盘</text>
+  <path d="M190 208H245 M405 208H440 M590 208H680 M840 208H900 M1040 208H1065" class="arrow"/>
+  <rect x="430" y="335" width="170" height="70" rx="12" class="review"/><text x="515" y="365" text-anchor="middle" class="label">人工复核队列</text><text x="515" y="388" text-anchor="middle" class="small">学习服务主任</text>
+  <path d="M515 266V335 M600 370H670V251" class="arrow"/><text x="618" y="317" class="small">不通过或信息缺失</text>
+</svg>
