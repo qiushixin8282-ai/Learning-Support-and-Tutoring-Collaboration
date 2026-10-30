@@ -35,3 +35,5 @@ python -m unittest discover -s tests -v
 详见 [设计说明](docs/design.md)、[接口说明](docs/api.md)、[FDE 交付包](docs/fde-delivery.md)、[项目推荐书](docs/项目推荐书.md)、[现场调研与需求定义包](docs/现场调研与需求定义包.md)、[行业分析报告](docs/学习支持与辅导协作行业分析报告.docx)、[现状流程图](docs/现状流程图.svg)、[转型后流程图](docs/数智化转型后流程图.svg)、[设计方案](docs/设计方案.md) 和 [报价单](docs/报价单.md)。
 
 面向下一阶段系统建设的范围与架构建议见 [学习支持协作实验室一期需求清单](docs/学习支持协作实验室一期需求清单.md)。
+
+后端服务、AI 安全边界、数据模型和试点验证方案见 [Python后端技术架构方案](docs/Python后端技术架构方案.md)。
