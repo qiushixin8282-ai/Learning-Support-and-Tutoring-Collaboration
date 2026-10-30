@@ -37,3 +37,5 @@ python -m unittest discover -s tests -v
 面向下一阶段系统建设的范围与架构建议见 [学习支持协作实验室一期需求清单](docs/学习支持协作实验室一期需求清单.md)。
 
 后端服务、AI 安全边界、数据模型和试点验证方案见 [Python后端技术架构方案](docs/Python后端技术架构方案.md)。
+
+阶段 1 的单脚本检索增强问答原型见 [stage1_rag_prototype.py](examples/stage1_rag_prototype.py)，配套资料为 [阶段1学习支持资料](data/阶段1学习支持资料.md)。
