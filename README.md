@@ -74,6 +74,20 @@ python -m app.api.cli --lifecycle-demo
 python -m unittest discover -s tests -v
 ```
 
+## 管理后台原型
+
+第一批 FastAPI 管理后台已实现 JWT 登录、五类角色的“看/改/审/发布”动作模型、SQLite 初始化、系统提示词版本管理和审计日志查询。
+
+```bash
+# 首次本地运行：交互式创建系统管理员（密码不会写入代码）
+python -m app.api.bootstrap --email admin@example.com --name "系统管理员"
+
+# 启动服务后访问 http://127.0.0.1:8000/login
+uvicorn app.api.main:app --reload
+```
+
+生产部署前必须设置 `APP_ENV=production` 和高强度 `JWT_SECRET`，并通过反向代理启用 HTTPS；资料上传、向量检索和 Agent 执行循环将在后续批次接入。
+
 ## 资料问答原型
 
 阶段 1 原型使用本地 Markdown、角色权限过滤、FAISS 与 BM25 混合检索。运行前复制环境变量模板并填写自己的密钥；不要提交 `.env` 文件。
