@@ -38,4 +38,6 @@ python -m unittest discover -s tests -v
 
 后端服务、AI 安全边界、数据模型和试点验证方案见 [Python后端技术架构方案](docs/Python后端技术架构方案.md)。
 
+用户端 SSE 问答接口、SQLite 会话表与前端交互约定见 [用户端问答接口设计](docs/用户端问答接口设计.md)。
+
 阶段 1 的单脚本检索增强问答原型见 [stage1_rag_prototype.py](examples/stage1_rag_prototype.py)，配套资料为 [阶段1学习支持资料](data/阶段1学习支持资料.md)。
