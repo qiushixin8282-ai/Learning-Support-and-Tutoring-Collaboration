@@ -1,4 +1,4 @@
-from learning_support_collab.main import run_demo, run_lifecycle_demo
+from app.api.cli import run_demo, run_lifecycle_demo
 
 
 for result in run_demo():

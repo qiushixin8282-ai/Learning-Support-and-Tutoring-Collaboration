@@ -1,4 +1,4 @@
-from learning_support_collab.core.models import SupportTask, TaskStatus
+from app.models.domain import SupportTask, TaskStatus
 
 
 ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {

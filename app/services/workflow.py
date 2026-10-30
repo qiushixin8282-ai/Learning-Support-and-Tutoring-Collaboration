@@ -1,4 +1,4 @@
-from learning_support_collab.core.models import Evaluation, SupportRequest
+from app.models.domain import Evaluation, SupportRequest
 
 
 def evaluate_request(request: SupportRequest, *, required_rule_version: str) -> Evaluation:

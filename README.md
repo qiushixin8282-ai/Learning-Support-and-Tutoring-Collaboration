@@ -1,43 +1,116 @@
-# Learning Support and Tutoring Collaboration
+# 学习支持协作实验室
 
-一个可运行的训练原型：把学习支持请求变成**受控、可追溯、人工确认**的服务任务。它面向“北辰在线学院”的合成训练场景，不连接真实学生、课程或生产系统。
+面向学生、助教、导师与课题组负责人的受控协作实验室训练项目。项目将学习任务、资料检索、实验记录、成果版本、审核留痕与 AI 建议统一到可追溯的协作流程中。
 
-## 为什么做
+> 本仓库只包含自编的匿名示例资料和训练原型；不连接真实学生、课程、实验或生产系统。
 
-当前支持请求常通过多渠道进入，助教、课程运营和讲师之间的交接缺少统一版本与责任记录。原型把每个请求标准化为任务，并在缺少授权、规则版本或人工确认时停止自动流转，转交具名负责人。
+## 核心功能
 
-## 快速开始
+- 受控任务流转：关键步骤需要授权、规则版本与具名责任人。
+- 权限感知资料问答原型：先按角色过滤资料，再执行 BM25 与向量混合检索。
+- 可追溯成果链路：任务、资料/实验记录、代码 commit、成果版本与审核记录可关联。
+- Agent 治理设计：工具白名单、五轮执行上限、前置校验、草稿人工确认和全链路审计。
+- 测试与评测资产：包含任务流转单元测试及 30 条 Agent 评测用例。
+
+## 架构图（文字版）
+
+```text
+入口层 app/api/
+  └─ 命令行入口；后续承载 FastAPI 路由、SSE 与鉴权依赖
+服务层 app/services/
+  └─ 任务流转、规则校验、资料检索、权限过滤、审计能力
+智能体编排层 app/agents/
+  └─ 工具注册、受控执行循环、人工确认中断、模型供应商适配
+数据模型层 app/models/
+  └─ 领域对象；后续扩展 SQLite/PostgreSQL 表结构与 Schema
+
+管理后台 admin/
+  └─ 后续服务端渲染页面、模板与静态资源
+```
+
+权限校验在 API 依赖和服务工具内部双重执行；审计日志由服务层与 Agent Harness 统一写入。AI 只能提出建议或生成待确认草稿，不能自行提交审核、定稿或发布。
+
+## 目录说明
+
+```text
+.
+├── app/
+│   ├── api/          # 入口层：CLI、后续路由与 SSE
+│   ├── services/     # 服务层：流转、检索、权限与审计
+│   ├── agents/       # 智能体编排层预留
+│   ├── models/       # 领域模型与后续 Schema
+│   └── config/       # 非机密默认配置
+├── admin/            # 管理后台模板与静态资源预留
+├── tests/            # 单元测试与 Agent 评测用例
+├── docs/             # 架构、接口、流程图、交付与上线检查文档
+├── data/             # 仅自编、匿名、可公开的示例资料
+├── scripts/          # 本地构建和部署提示脚本
+├── .env.example      # 环境变量名称模板
+├── requirements.txt
+├── pyproject.toml
+├── LICENSE
+└── README.md
+```
+
+## 安装与运行
+
+要求：Python 3.11+。
 
 ```bash
 python -m venv .venv
-.venv\\Scripts\\activate        # macOS/Linux: source .venv/bin/activate
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
 pip install -r requirements.txt
 pip install -e .
-python -m learning_support_collab.main --demo
-python -m learning_support_collab.main --lifecycle-demo
+
+# 运行匿名任务分流演示
+python -m app.api.cli --demo
+
+# 运行可审计任务生命周期演示
+python -m app.api.cli --lifecycle-demo
+
+# 运行测试
 python -m unittest discover -s tests -v
 ```
 
-## 项目结构
+## 资料问答原型
 
-- `src/learning_support_collab/`：领域模型、规则和 CLI。
-- `config/default.yaml`：非机密默认规则。
-- `data/sample_requests.json`：匿名合成样例，不含真实个人资料。
-- `docs/`：设计、接口、FDE 全流程交付与履历资料位。
-- `tests/`：核心规则和回归测试。
+阶段 1 原型使用本地 Markdown、角色权限过滤、FAISS 与 BM25 混合检索。运行前复制环境变量模板并填写自己的密钥；不要提交 `.env` 文件。
+
+```bash
+copy .env.example .env
+# 填写 LLM_MODEL 与 LLM_API_KEY 后运行
+python -m app.services.rag_prototype --document data/阶段1学习支持资料.md --role 学生 --question "学生可以提交什么内容？"
+```
+
+原型回答会标注“文件名 + 切片序号”；检索不到时返回“资料中未找到”。生成的 JSONL 审计日志、FAISS 索引和本地数据库均被 `.gitignore` 排除。
+
+## 环境变量
+
+| 变量 | 说明 |
+| --- | --- |
+| `LLM_PROVIDER` | LLM 供应商适配类型，当前原型为 `openai_compatible`。 |
+| `LLM_MODEL` | 模型名称。 |
+| `LLM_API_KEY` | 模型 API Key，仅通过本地环境变量提供。 |
+| `LLM_BASE_URL` | OpenAI 兼容 API 地址。 |
+| `JWT_SECRET` | 后续 Web 登录鉴权使用的服务端密钥。 |
+| `DATABASE_URL` | 后续 Web 服务使用的数据库连接地址。 |
+
+## 演示与文档
+
+- [项目设计方案](docs/设计方案.md)
+- [Python 后端技术架构](docs/Python后端技术架构方案.md)
+- [用户端问答接口设计](docs/用户端问答接口设计.md)
+- [智能体工具与治理设计](docs/智能体工具与治理设计.md)
+- [Agent 执行循环框架设计](docs/Agent执行循环框架设计.md)
+- [30 条 Agent 评测用例](tests/agent_evaluation_cases.json)
+- [上线前检查清单](docs/上线前检查清单.md)
+- [部署与公开仓库说明](docs/部署与公开仓库说明.md)
+- [现状流程图](docs/学习支持协作全流程现状图.svg) 与 [数智化转型流程图](docs/学习支持协作数智化转型全流程图.svg)
 
 ## 当前边界
 
-- 仅演示任务分流与审计记录，不发送消息、不修改课程或学生系统。
-- 没有授权、规则版本或责任人时，结果为 `needs_human_review`。
-- 指标、ROI 与试点结论均为待验证的训练假设，不能当作生产收益。
+本仓库的可运行部分是任务流转 CLI 和阶段 1 RAG 原型。FastAPI 问答入口、服务端渲染管理后台、SQLite 会话、Agent 执行循环与人工审核页面已完成架构、接口、评测及上线检查设计，后续可按文档分阶段实现。
 
-详见 [设计说明](docs/design.md)、[接口说明](docs/api.md)、[FDE 交付包](docs/fde-delivery.md)、[项目推荐书](docs/项目推荐书.md)、[现场调研与需求定义包](docs/现场调研与需求定义包.md)、[行业分析报告](docs/学习支持与辅导协作行业分析报告.docx)、[现状流程图](docs/现状流程图.svg)、[转型后流程图](docs/数智化转型后流程图.svg)、[设计方案](docs/设计方案.md) 和 [报价单](docs/报价单.md)。
-
-面向下一阶段系统建设的范围与架构建议见 [学习支持协作实验室一期需求清单](docs/学习支持协作实验室一期需求清单.md)。
-
-后端服务、AI 安全边界、数据模型和试点验证方案见 [Python后端技术架构方案](docs/Python后端技术架构方案.md)。
-
-用户端 SSE 问答接口、SQLite 会话表与前端交互约定见 [用户端问答接口设计](docs/用户端问答接口设计.md)。
-
-阶段 1 的单脚本检索增强问答原型见 [stage1_rag_prototype.py](examples/stage1_rag_prototype.py)，配套资料为 [阶段1学习支持资料](data/阶段1学习支持资料.md)。
+公开仓库的安全扫描、提交规范、创建方式和未登录复核步骤见 [部署与公开仓库说明](docs/部署与公开仓库说明.md)。

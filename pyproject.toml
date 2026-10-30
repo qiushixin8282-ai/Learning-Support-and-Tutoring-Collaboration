@@ -6,8 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "learning-support-collab"
 version = "0.1.0"
 description = "A controlled learning-support and tutoring collaboration training prototype"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = ["PyYAML>=6.0,<7.0"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["app*"]

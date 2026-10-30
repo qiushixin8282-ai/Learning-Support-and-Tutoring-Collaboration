@@ -2,18 +2,18 @@ import argparse
 import json
 from pathlib import Path
 
-from learning_support_collab.core.models import SupportRequest
-from learning_support_collab.core.models import SupportTask
-from learning_support_collab.core.lifecycle import transition
-from learning_support_collab.core.workflow import evaluate_request
-from learning_support_collab.utils.io import load_json, load_yaml
+from app.models.domain import SupportRequest
+from app.models.domain import SupportTask
+from app.services.lifecycle import transition
+from app.services.workflow import evaluate_request
+from app.services.io_utils import load_json, load_yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def run_demo() -> list[dict]:
-    config = load_yaml(ROOT / "config" / "default.yaml")
+    config = load_yaml(ROOT / "app" / "config" / "default.yaml")
     records = load_json(ROOT / "data" / "sample_requests.json")
     return [
         evaluate_request(SupportRequest(**record), required_rule_version=config["required_rule_version"]).to_dict()

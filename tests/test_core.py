@@ -1,10 +1,10 @@
 import unittest
 
-from learning_support_collab.core.models import SupportRequest
-from learning_support_collab.core.models import SupportTask
-from learning_support_collab.core.lifecycle import transition
-from learning_support_collab.main import run_lifecycle_demo
-from learning_support_collab.core.workflow import evaluate_request
+from app.models.domain import SupportRequest
+from app.models.domain import SupportTask
+from app.services.lifecycle import transition
+from app.api.cli import run_lifecycle_demo
+from app.services.workflow import evaluate_request
 
 
 class WorkflowTests(unittest.TestCase):
