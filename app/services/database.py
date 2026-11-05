@@ -78,6 +78,33 @@ def initialize_database() -> None:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(user_id) REFERENCES users(id)
             );
+
+            CREATE TABLE IF NOT EXISTS knowledge_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                source_type TEXT NOT NULL DEFAULT 'Markdown',
+                visibility TEXT NOT NULL DEFAULT '全员可见',
+                content TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT '已发布',
+                created_by_user_id INTEGER,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(created_by_user_id) REFERENCES users(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS support_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                owner TEXT NOT NULL,
+                priority TEXT NOT NULL DEFAULT '普通',
+                status TEXT NOT NULL DEFAULT '待分配',
+                due_date TEXT,
+                created_by_user_id INTEGER,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(created_by_user_id) REFERENCES users(id)
+            );
             """
         )
         default_prompt = (
