@@ -54,6 +54,22 @@ def verify_password(password: str, encoded: str) -> bool:
     return hmac.compare_digest(hash_password(password, salt), encoded)
 
 
+def password_error(password: str) -> str | None:
+    """返回面向用户的密码强度错误；通过时返回 None。"""
+
+    if len(password) < 10:
+        return "密码至少需要 10 位"
+    if len(password) > 128:
+        return "密码不能超过 128 位"
+    if not any(char.isupper() for char in password):
+        return "密码需要包含大写字母"
+    if not any(char.islower() for char in password):
+        return "密码需要包含小写字母"
+    if not any(char.isdigit() for char in password):
+        return "密码需要包含数字"
+    return None
+
+
 def create_access_token(user_id: int, role: Role) -> str:
     """签发短时 JWT；角色仍须在接口处与业务权限共同校验。"""
 

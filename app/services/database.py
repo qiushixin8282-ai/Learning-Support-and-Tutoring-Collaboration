@@ -105,8 +105,48 @@ def initialize_database() -> None:
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(created_by_user_id) REFERENCES users(id)
             );
+
+            CREATE TABLE IF NOT EXISTS knowledge_chunks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                knowledge_item_id INTEGER NOT NULL,
+                chunk_no INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                vector_json TEXT NOT NULL,
+                embedding_model TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(knowledge_item_id, chunk_no),
+                FOREIGN KEY(knowledge_item_id) REFERENCES knowledge_items(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS rag_queries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                question TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                source_ids TEXT NOT NULL,
+                model_name TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_item ON knowledge_chunks(knowledge_item_id);
+            CREATE INDEX IF NOT EXISTS idx_rag_queries_created ON rag_queries(created_at);
             """
         )
+        knowledge_columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_items)").fetchall()}
+        migrations = {
+            "original_name": "TEXT",
+            "stored_name": "TEXT",
+            "mime_type": "TEXT",
+            "size_bytes": "INTEGER NOT NULL DEFAULT 0",
+            "page_count": "INTEGER NOT NULL DEFAULT 0",
+            "char_count": "INTEGER NOT NULL DEFAULT 0",
+            "parse_status": "TEXT NOT NULL DEFAULT '已解析'",
+        }
+        for column, definition in migrations.items():
+            if column not in knowledge_columns:
+                conn.execute(f"ALTER TABLE knowledge_items ADD COLUMN {column} {definition}")
         default_prompt = (
             "你是学习支持协作实验室的资料助手，只根据提供的资料内容回答，"
             "不确定时明确说'资料中未找到'，回答末尾附引用来源（文件名+切片序号），不得编造。"

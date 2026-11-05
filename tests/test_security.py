@@ -3,7 +3,7 @@
 import unittest
 
 from app.models.schemas import Action, Role
-from app.services.security import allows, hash_password, verify_password
+from app.services.security import allows, hash_password, password_error, verify_password
 
 
 class SecurityTests(unittest.TestCase):
@@ -11,6 +11,13 @@ class SecurityTests(unittest.TestCase):
         encoded = hash_password("local-demo-password")
         self.assertTrue(verify_password("local-demo-password", encoded))
         self.assertFalse(verify_password("incorrect-password", encoded))
+
+    def test_password_strength_policy(self):
+        self.assertIsNone(password_error("StrongPass2026"))
+        self.assertIsNotNone(password_error("short"))
+        self.assertIsNotNone(password_error("alllowercase2026"))
+        self.assertIsNotNone(password_error("NOLOWERCASE2026"))
+        self.assertIsNotNone(password_error("NoDigitsHere"))
 
     def test_role_permission_matrix(self):
         self.assertTrue(allows(Role.STUDENT, Action.VIEW))

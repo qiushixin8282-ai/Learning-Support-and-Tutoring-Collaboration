@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}连接 DeepSeek{% endblock %}
+{% block section %}知识与智能 / 智能问答 / 模型连接{% endblock %}
+{% block heading %}连接 DeepSeek{% endblock %}
+{% block content %}
+<style>
+.connect-wrap{max-width:680px;margin:28px auto}.connect-card{padding:30px;border:1px solid var(--line);border-radius:20px;background:#fffdf9;box-shadow:0 16px 45px #8c665518}.connect-mark{display:grid;place-items:center;width:54px;height:54px;border-radius:17px;color:#fff;background:linear-gradient(135deg,#dc8065,#c46c55);font-size:24px}.connect-card h2{margin:22px 0 8px}.connect-card p{color:var(--muted);line-height:1.8}.connect-form{display:grid;gap:14px;margin-top:24px}.connect-form label{font-weight:700}.connect-form input,.connect-form select{width:100%;margin-top:7px;padding:13px;border:1px solid #e7d8ce;border-radius:10px;background:#fffaf6}.connect-form .button{padding:13px}.privacy-note{margin-top:18px;padding:14px;border-radius:11px;background:#f7eee7;color:#765e53;font-size:12px}.connected{padding:14px;border-radius:11px;background:#edf5ee;color:#54705b}
+</style>
+<section class="connect-wrap"><article class="connect-card"><span class="connect-mark">✦</span><h2>让知识库真正开始回答</h2><p>DeepSeek 负责依据召回的资料生成答案；本地 FAISS 继续负责向量检索，因此不会额外调用向量接口。</p>{% if config.configured %}<p class="connected">✓ 当前已连接 {{ config.chat_model }}</p><a class="button" href="/admin/rag">返回智能问答</a>{% else %}<form class="connect-form" method="post" action="/admin/rag/settings/deepseek"><label>DeepSeek API Key<input type="password" name="api_key" required autocomplete="new-password" placeholder="sk-..."></label><label>回答模型<select name="model"><option value="deepseek-v4-flash">DeepSeek V4 Flash（推荐）</option><option value="deepseek-v4-pro">DeepSeek V4 Pro</option></select></label><button class="button" type="submit">安全保存并连接</button></form><div class="privacy-note">🔒 密钥仅写入本机的 <code>.env</code> 文件，该文件已被 Git 忽略，不会同步到 GitHub，也不会写入审计日志。</div>{% endif %}</article></section>
+{% endblock %}

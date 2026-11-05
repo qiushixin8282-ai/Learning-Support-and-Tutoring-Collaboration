@@ -7,12 +7,13 @@
 from __future__ import annotations
 
 import sqlite3
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlencode
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -20,10 +21,13 @@ from app.api.dependencies import current_user, require_admin
 from app.models.schemas import LoginRequest, LoginResponse, Role, UserView
 from app.services.audit import new_trace_id, write_audit_log
 from app.services.database import connection, initialize_database
-from app.services.security import create_access_token, verify_password
+from app.services.document_parser import DocumentParseError, parse_and_store
+from app.services.rag_service import generate_answer, index_knowledge_item, model_config, retrieve, save_deepseek_config
+from app.services.security import create_access_token, hash_password, password_error, verify_password
 
 
 ROOT = Path(__file__).resolve().parents[2]
+UPLOAD_DIR = ROOT / "uploads" / "knowledge"
 templates = Jinja2Templates(directory=str(ROOT / "admin" / "templates"))
 
 
@@ -221,13 +225,204 @@ def create_knowledge(
     if not title or not content:
         return RedirectResponse(url="/admin/knowledge?error=标题和正文不能为空", status_code=303)
     with connection() as conn:
-        conn.execute(
+        cursor = conn.execute(
             "INSERT INTO knowledge_items(title, source_type, visibility, content, created_by_user_id) VALUES (?, ?, ?, ?, ?)",
             (title, source_type, visibility, content, user.id),
         )
+        item_id = cursor.lastrowid
+    try:
+        chunk_count = index_knowledge_item(item_id)
+    except (RuntimeError, ValueError) as exc:
+        return RedirectResponse(url=f"/admin/knowledge?{urlencode({'error': f'资料已保存，但向量索引失败：{exc}'})}", status_code=303)
     write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
                     event_type="knowledge_created", result_status="success", detail=f"新增资料：{title}")
-    return RedirectResponse(url="/admin/knowledge?success=资料已加入知识库", status_code=303)
+    return RedirectResponse(url=f"/admin/knowledge?success=资料已发布并生成 {chunk_count} 个检索切片", status_code=303)
+
+
+@app.post("/admin/knowledge/upload")
+async def upload_knowledge(
+    document: UploadFile = File(...), visibility: str = Form("全员可见"),
+    user: UserView = Depends(require_admin),
+) -> RedirectResponse:
+    """校验、保存并解析 PDF/Markdown/TXT，成功后发布到知识库。"""
+    allowed_visibility = {"全员可见", "助教及以上", "导师及以上", "仅管理员"}
+    if visibility not in allowed_visibility:
+        return RedirectResponse(url="/admin/knowledge?error=不支持的可见范围", status_code=303)
+    try:
+        parsed = await parse_and_store(document, UPLOAD_DIR)
+    except DocumentParseError as exc:
+        write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
+                        event_type="knowledge_upload_failed", result_status="failed", detail=str(exc), risk_flag="file_validation")
+        return RedirectResponse(url=f"/admin/knowledge?{urlencode({'error': str(exc)})}", status_code=303)
+    with connection() as conn:
+        cursor = conn.execute(
+            """INSERT INTO knowledge_items(
+                title, source_type, visibility, content, status, created_by_user_id,
+                original_name, stored_name, mime_type, size_bytes, page_count, char_count, parse_status
+            ) VALUES (?, ?, ?, ?, '已发布', ?, ?, ?, ?, ?, ?, ?, '已解析')""",
+            (Path(parsed.original_name).stem, parsed.source_type, visibility, parsed.content, user.id,
+             parsed.original_name, parsed.stored_name, parsed.mime_type, parsed.size_bytes,
+             parsed.page_count, parsed.char_count),
+        )
+        item_id = cursor.lastrowid
+    try:
+        chunk_count = index_knowledge_item(item_id)
+    except (RuntimeError, ValueError) as exc:
+        return RedirectResponse(url=f"/admin/knowledge?{urlencode({'error': f'文件已解析，但向量索引失败：{exc}'})}", status_code=303)
+    write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
+                    event_type="knowledge_uploaded", result_status="success",
+                    detail=f"上传并解析：{parsed.original_name}（{parsed.char_count} 字符）")
+    return RedirectResponse(url=f"/admin/knowledge?success=文件已解析并生成 {chunk_count} 个检索切片", status_code=303)
+
+
+ATLAS_TEMPLATE = """# Atlas 世界模型知识卡
+
+## 基本信息
+Atlas 是 World Labs 于 2026 年 9 月发布的下一代空间智能世界模型。World Labs 由李飞飞等人创立，目标是构建能够感知、生成、推理并与三维世界交互的世界模型。
+
+## 核心定位
+Atlas 不是单一的图片或视频生成器，而是一个统一的世界建模基础模型。它从头预训练，原生处理文本、图像、视频、相机位姿与三维深度等信息，并把输入组织成共享的空间上下文。
+
+## 模型架构
+Atlas 被描述为多模态自回归扩散 Transformer。不同模态输入被定位到三维空间中，模型随后基于空间上下文逐步生成新的多模态内容，以保持视角、几何结构和时间演化的一致性。
+
+## 主要能力
+1. 相机可控生成：根据一张或多张参考图，从指定相机位置与角度生成新视图和长视频。
+2. 空间重建：从少量或多张图像恢复真实场景，生成新视角图像与显式三维输出。
+3. 时空模拟：从视频理解空间与时间变化，可用于视频重构以及机器人 Real-to-Sim 工作流。
+4. 图像与全景生成：根据文本生成图像和 360 度全景，并支持复杂提示与多种视觉风格。
+
+## 与 Marble 的关系
+Marble 是 World Labs 已公开的多模态世界生成产品，可从文本、图像、视频或粗略三维布局创建可编辑的三维世界。Atlas 将为 Marble 的未来版本及 World Labs 的其他产品提供基础能力。
+
+## 学习讨论问题
+- 世界模型与大语言模型的上下文分别表示什么？
+- 三维空间一致性为什么比单帧视觉质量更难？
+- 从真实场景重建到机器人仿真，需要控制哪些误差？
+- 世界模型可能如何改变影视、游戏、建筑、教育和机器人研究？
+
+来源：World Labs, “Atlas: A World Model for Spatial Intelligence”, 2026-09-01, https://www.worldlabs.ai/blog/atlas
+"""
+
+
+@app.get("/admin/rag")
+def rag_page(request: Request, user: UserView = Depends(require_admin)):
+    with connection() as conn:
+        chunk_count = conn.execute("SELECT COUNT(*) FROM knowledge_chunks").fetchone()[0]
+        item_count = conn.execute("SELECT COUNT(DISTINCT knowledge_item_id) FROM knowledge_chunks").fetchone()[0]
+        recent = conn.execute("SELECT * FROM rag_queries ORDER BY id DESC LIMIT 8").fetchall()
+        prompt = conn.execute("SELECT content FROM prompt_templates WHERE is_active = 1 ORDER BY id DESC LIMIT 1").fetchone()
+    return templates.TemplateResponse(request, "rag.html", {
+        "user": user, "chunk_count": chunk_count, "item_count": item_count, "recent": recent,
+        "config": model_config(), "prompt": prompt["content"] if prompt else "只依据资料回答。",
+        "question": "", "answer": None, "hits": [],
+    })
+
+
+@app.post("/admin/rag/ask")
+def rag_ask(request: Request, question: str = Form(...), user: UserView = Depends(require_admin)):
+    question = question.strip()
+    if not question:
+        return RedirectResponse(url="/admin/rag?error=问题不能为空", status_code=303)
+    with connection() as conn:
+        prompt = conn.execute("SELECT content FROM prompt_templates WHERE is_active = 1 ORDER BY id DESC LIMIT 1").fetchone()
+    try:
+        hits = retrieve(question, user.role.value)
+        answer, mode, model_name = generate_answer(question, hits, prompt["content"] if prompt else "只依据资料回答。")
+    except RuntimeError as exc:
+        return RedirectResponse(url=f"/admin/rag?{urlencode({'error': str(exc)})}", status_code=303)
+    with connection() as conn:
+        conn.execute(
+            "INSERT INTO rag_queries(user_id, question, answer, source_ids, model_name, mode) VALUES (?, ?, ?, ?, ?, ?)",
+            (user.id, question, answer, json.dumps([hit.chunk_id for hit in hits]), model_name, mode),
+        )
+        chunk_count = conn.execute("SELECT COUNT(*) FROM knowledge_chunks").fetchone()[0]
+        item_count = conn.execute("SELECT COUNT(DISTINCT knowledge_item_id) FROM knowledge_chunks").fetchone()[0]
+        recent = conn.execute("SELECT * FROM rag_queries ORDER BY id DESC LIMIT 8").fetchall()
+    write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
+                    event_type="rag_question", result_status="success", detail=f"RAG 问答：命中 {len(hits)} 个切片")
+    return templates.TemplateResponse(request, "rag.html", {
+        "user": user, "chunk_count": chunk_count, "item_count": item_count, "recent": recent,
+        "config": model_config(), "prompt": prompt["content"] if prompt else "只依据资料回答。",
+        "question": question, "answer": answer, "hits": hits,
+    })
+
+
+@app.post("/admin/rag/settings/deepseek")
+def rag_deepseek_settings(
+    api_key: str = Form(...), model: str = Form("deepseek-v4-flash"),
+    user: UserView = Depends(require_admin),
+) -> RedirectResponse:
+    api_key = api_key.strip()
+    if not api_key:
+        return RedirectResponse(url="/admin/rag?error=请输入 DeepSeek API Key", status_code=303)
+    save_deepseek_config(api_key, model)
+    write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
+                    event_type="model_configured", result_status="success", detail=f"已连接 DeepSeek：{model}")
+    return RedirectResponse(url="/admin/rag?success=DeepSeek 模型连接已保存，可以开始真实 RAG 问答", status_code=303)
+
+
+@app.get("/admin/rag/connect")
+def rag_connect_page(request: Request, user: UserView = Depends(require_admin)):
+    return templates.TemplateResponse(request, "rag_connect.html", {"user": user, "config": model_config()})
+
+
+@app.post("/admin/rag/reindex")
+def rag_reindex(user: UserView = Depends(require_admin)) -> RedirectResponse:
+    with connection() as conn:
+        ids = [row[0] for row in conn.execute("SELECT id FROM knowledge_items WHERE status = '已发布'").fetchall()]
+    total, errors = 0, []
+    for item_id in ids:
+        try:
+            total += index_knowledge_item(item_id)
+        except (RuntimeError, ValueError) as exc:
+            errors.append(str(exc))
+    if errors:
+        return RedirectResponse(url=f"/admin/rag?{urlencode({'error': f'部分索引失败：{errors[0]}'})}", status_code=303)
+    return RedirectResponse(url=f"/admin/rag?success=索引重建完成，共 {total} 个切片", status_code=303)
+
+
+@app.post("/admin/rag/templates/atlas")
+def create_atlas_template(user: UserView = Depends(require_admin)) -> RedirectResponse:
+    with connection() as conn:
+        existing = conn.execute("SELECT id FROM knowledge_items WHERE title = ?", ("Atlas 世界模型知识卡",)).fetchone()
+        if existing:
+            item_id = existing["id"]
+            conn.execute("UPDATE knowledge_items SET content = ?, status = '已发布', updated_at = CURRENT_TIMESTAMP WHERE id = ?", (ATLAS_TEMPLATE, item_id))
+        else:
+            cursor = conn.execute(
+                "INSERT INTO knowledge_items(title, source_type, visibility, content, status, created_by_user_id) VALUES (?, '知识模板', '全员可见', ?, '已发布', ?)",
+                ("Atlas 世界模型知识卡", ATLAS_TEMPLATE, user.id),
+            )
+            item_id = cursor.lastrowid
+    try:
+        count = index_knowledge_item(item_id)
+    except (RuntimeError, ValueError) as exc:
+        return RedirectResponse(url=f"/admin/rag?{urlencode({'error': f'模板已保存，但索引失败：{exc}'})}", status_code=303)
+    write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
+                    event_type="rag_template_created", result_status="success", detail="创建 Atlas 世界模型知识模板")
+    return RedirectResponse(url=f"/admin/rag?success=Atlas 模板已创建并生成 {count} 个切片", status_code=303)
+
+
+@app.get("/admin/knowledge/{item_id}")
+def knowledge_detail(item_id: int, request: Request, user: UserView = Depends(require_admin)):
+    with connection() as conn:
+        item = conn.execute("SELECT * FROM knowledge_items WHERE id = ?", (item_id,)).fetchone()
+    if not item:
+        raise HTTPException(status_code=404, detail="资料不存在")
+    return templates.TemplateResponse(request, "knowledge_detail.html", {"user": user, "item": item})
+
+
+@app.get("/admin/knowledge/{item_id}/download")
+def download_knowledge(item_id: int, user: UserView = Depends(require_admin)) -> FileResponse:
+    with connection() as conn:
+        item = conn.execute("SELECT original_name, stored_name, mime_type FROM knowledge_items WHERE id = ?", (item_id,)).fetchone()
+    if not item or not item["stored_name"]:
+        raise HTTPException(status_code=404, detail="原始文件不存在")
+    path = (UPLOAD_DIR / item["stored_name"]).resolve()
+    if path.parent != UPLOAD_DIR.resolve() or not path.is_file():
+        raise HTTPException(status_code=404, detail="原始文件不存在")
+    return FileResponse(path, media_type=item["mime_type"] or "application/octet-stream", filename=item["original_name"])
 
 
 @app.post("/admin/knowledge/{item_id}/toggle")
@@ -300,3 +495,93 @@ def toggle_user(user_id: int, user: UserView = Depends(require_admin)) -> Redire
     write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
                     event_type="user_status_changed", result_status="success", detail=f"{target['email']} → {'启用' if new_value else '停用'}")
     return RedirectResponse(url="/admin/users?success=账号状态已更新", status_code=303)
+
+
+@app.get("/admin/users/new")
+def new_user_page(request: Request, user: UserView = Depends(require_admin)):
+    return templates.TemplateResponse(request, "user_form.html", {"user": user, "roles": [role.value for role in Role]})
+
+
+@app.post("/admin/users/new")
+def create_user(
+    email: str = Form(...), display_name: str = Form(...), role: str = Form(...),
+    password: str = Form(...), confirm_password: str = Form(...),
+    user: UserView = Depends(require_admin),
+) -> RedirectResponse:
+    email, display_name = email.strip().lower(), display_name.strip()
+    if not email or "@" not in email:
+        return RedirectResponse(url="/admin/users/new?error=请输入有效邮箱", status_code=303)
+    if not display_name:
+        return RedirectResponse(url="/admin/users/new?error=请输入成员姓名", status_code=303)
+    if role not in {item.value for item in Role}:
+        return RedirectResponse(url="/admin/users/new?error=角色无效", status_code=303)
+    if password != confirm_password:
+        return RedirectResponse(url="/admin/users/new?error=两次输入的密码不一致", status_code=303)
+    if error := password_error(password):
+        return RedirectResponse(url=f"/admin/users/new?{urlencode({'error': error})}", status_code=303)
+    try:
+        with connection() as conn:
+            conn.execute("INSERT INTO users(email, display_name, password_hash, role) VALUES (?, ?, ?, ?)",
+                         (email, display_name, hash_password(password), role))
+    except sqlite3.IntegrityError:
+        return RedirectResponse(url="/admin/users/new?error=该邮箱已存在", status_code=303)
+    write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
+                    event_type="user_created", result_status="success", detail=f"创建账号 {email}，角色 {role}")
+    return RedirectResponse(url="/admin/users?success=新账号已创建", status_code=303)
+
+
+@app.get("/admin/users/{user_id}/password")
+def reset_password_page(user_id: int, request: Request, user: UserView = Depends(require_admin)):
+    with connection() as conn:
+        target = conn.execute("SELECT id, email, display_name FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not target:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return templates.TemplateResponse(request, "reset_password.html", {"user": user, "target": target})
+
+
+@app.post("/admin/users/{user_id}/password")
+def reset_password(
+    user_id: int, password: str = Form(...), confirm_password: str = Form(...),
+    user: UserView = Depends(require_admin),
+) -> RedirectResponse:
+    if password != confirm_password:
+        return RedirectResponse(url=f"/admin/users/{user_id}/password?error=两次输入的密码不一致", status_code=303)
+    if error := password_error(password):
+        return RedirectResponse(url=f"/admin/users/{user_id}/password?{urlencode({'error': error})}", status_code=303)
+    with connection() as conn:
+        target = conn.execute("SELECT email FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not target:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password(password), user_id))
+    write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
+                    event_type="password_reset", result_status="success", detail=f"管理员重置 {target['email']} 的密码")
+    return RedirectResponse(url="/admin/users?success=密码已重置", status_code=303)
+
+
+@app.get("/account/password")
+def change_password_page(request: Request, user: UserView = Depends(current_user)):
+    return templates.TemplateResponse(request, "change_password.html", {"user": user})
+
+
+@app.post("/account/password")
+def change_password(
+    current_password: str = Form(...), password: str = Form(...), confirm_password: str = Form(...),
+    user: UserView = Depends(current_user),
+) -> RedirectResponse:
+    with connection() as conn:
+        row = conn.execute("SELECT password_hash FROM users WHERE id = ?", (user.id,)).fetchone()
+    if not row or not verify_password(current_password, row["password_hash"]):
+        return RedirectResponse(url="/account/password?error=当前密码不正确", status_code=303)
+    if password != confirm_password:
+        return RedirectResponse(url="/account/password?error=两次输入的新密码不一致", status_code=303)
+    if verify_password(password, row["password_hash"]):
+        return RedirectResponse(url="/account/password?error=新密码不能与当前密码相同", status_code=303)
+    if error := password_error(password):
+        return RedirectResponse(url=f"/account/password?{urlencode({'error': error})}", status_code=303)
+    with connection() as conn:
+        conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password(password), user.id))
+    write_audit_log(trace_id=new_trace_id(), user_id=user.id, role=user.role.value,
+                    event_type="password_changed", result_status="success", detail="用户修改自己的密码")
+    response = RedirectResponse(url="/login?success=密码修改成功，请重新登录", status_code=303)
+    response.delete_cookie("access_token")
+    return response
