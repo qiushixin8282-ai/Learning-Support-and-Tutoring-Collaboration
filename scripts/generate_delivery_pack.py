@@ -129,9 +129,9 @@ def write_test_docs():
 
 def write_deployment():
     doc=setup("MVP 系统上线部署地址", "部署地址与验收记录")
-    doc.add_paragraph("当前 GitHub 仓库已保存可运行 MVP 源码和 CI 配置。由于本项目尚未获得云账号、域名、数据处理审批和生产密钥授权，不能将训练原型表述为已生产上线。")
-    add_table(doc,["项目","地址或状态","说明"],[["源码仓库","https://github.com/qiushixin8282-ai/Learning-Support-and-Tutoring-Collaboration","已推送的版本化源码"],["MVP 生产网站","待部署","需获得云资源、HTTPS域名、数据与安全审批后发布"],["本地健康检查","http://127.0.0.1:8000/health","本机启动后返回状态ok"]])
-    heading(doc,"部署完成后验收"); doc.add_paragraph("记录正式 HTTPS 地址、部署版本号、健康检查截图、角色权限测试结果、回滚版本和具名批准人。未完成这些项目不得对外宣称生产上线。") ; save(doc,"MVP系统上线部署地址")
+    doc.add_paragraph("MVP 静态训练实验室已部署。该站点用于六角色访谈、证据台账和业务挖掘报告的交互演示；受控协作后端 API 仍以仓库中 FastAPI 原型和本地测试为准。")
+    add_table(doc,["项目","地址或状态","说明"],[["MVP 网站","https://learning-support-collab-lab.starryprawn17.chatgpt.site","已部署的学习支持协作训练实验室"],["访问策略","自定义私有访问","当前仅授权用户可访问，不应将地址表述为公开服务"],["源码仓库","https://github.com/qiushixin8282-ai/Learning-Support-and-Tutoring-Collaboration","版本化源码与CI"],["本地健康检查","http://127.0.0.1:8000/health","FastAPI原型启动后返回状态ok"]])
+    heading(doc,"部署验收"); doc.add_paragraph("上线记录应保留部署版本号、健康检查截图、角色权限测试结果、回滚版本和具名批准人。若将网站改为公开访问，须先完成数据与安全审核。") ; save(doc,"MVP系统上线部署地址")
 
 
 def main():
