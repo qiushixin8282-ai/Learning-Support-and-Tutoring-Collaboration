@@ -106,6 +106,33 @@ def initialize_database() -> None:
                 FOREIGN KEY(created_by_user_id) REFERENCES users(id)
             );
 
+            CREATE TABLE IF NOT EXISTS task_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL,
+                actor_user_id INTEGER,
+                actor_role TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                from_status TEXT,
+                to_status TEXT,
+                reason TEXT NOT NULL DEFAULT '',
+                detail_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(task_id) REFERENCES support_tasks(id) ON DELETE CASCADE,
+                FOREIGN KEY(actor_user_id) REFERENCES users(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS task_reviews (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL,
+                reviewer_user_id INTEGER NOT NULL,
+                decision TEXT NOT NULL,
+                comment TEXT NOT NULL,
+                acceptance_criteria TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(task_id) REFERENCES support_tasks(id) ON DELETE CASCADE,
+                FOREIGN KEY(reviewer_user_id) REFERENCES users(id)
+            );
+
             CREATE TABLE IF NOT EXISTS knowledge_chunks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 knowledge_item_id INTEGER NOT NULL,
@@ -132,8 +159,25 @@ def initialize_database() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_item ON knowledge_chunks(knowledge_item_id);
             CREATE INDEX IF NOT EXISTS idx_rag_queries_created ON rag_queries(created_at);
+            CREATE INDEX IF NOT EXISTS idx_task_events_task ON task_events(task_id, id);
+            CREATE INDEX IF NOT EXISTS idx_task_reviews_task ON task_reviews(task_id, id);
             """
         )
+        task_columns = {row["name"] for row in conn.execute("PRAGMA table_info(support_tasks)").fetchall()}
+        task_migrations = {
+            "requester_role": "TEXT NOT NULL DEFAULT '学生'",
+            "rule_version": "TEXT",
+            "consent_confirmed": "INTEGER NOT NULL DEFAULT 0",
+            "source_reference": "TEXT",
+            "experiment_record": "TEXT",
+            "code_commit": "TEXT",
+            "version_verified": "INTEGER NOT NULL DEFAULT 0",
+            "reproduction_status": "TEXT NOT NULL DEFAULT '未测试'",
+            "revision_count": "INTEGER NOT NULL DEFAULT 0",
+        }
+        for column, definition in task_migrations.items():
+            if column not in task_columns:
+                conn.execute(f"ALTER TABLE support_tasks ADD COLUMN {column} {definition}")
         knowledge_columns = {row["name"] for row in conn.execute("PRAGMA table_info(knowledge_items)").fetchall()}
         migrations = {
             "original_name": "TEXT",

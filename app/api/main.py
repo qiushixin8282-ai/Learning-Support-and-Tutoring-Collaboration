@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.api.dependencies import current_user, require_admin
+from app.api.task_router import router as task_router
 from app.models.schemas import LoginRequest, LoginResponse, Role, UserView
 from app.services.audit import new_trace_id, write_audit_log
 from app.services.database import connection, initialize_database
@@ -41,6 +42,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="学习支持协作实验室", version="0.1.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(ROOT / "admin" / "static")), name="static")
+app.include_router(task_router)
 
 
 def error_response(status_code: int, code: str, message: str) -> JSONResponse:
