@@ -89,6 +89,10 @@ uvicorn app.api.main:app --reload
 
 生产部署前必须设置 `APP_ENV=production` 和高强度 `JWT_SECRET`，并通过反向代理启用 HTTPS；资料上传、向量检索和 Agent 执行循环将在后续批次接入。
 
+## 容器化部署
+
+本仓库提供 `Dockerfile` 与 `docker-compose.yml`。复制 `.env.example` 为本地 `.env`，设置至少 32 位的 `JWT_SECRET` 与实际 `TRUSTED_HOSTS` 后执行 `scripts/deploy.sh`。生产启动会拒绝弱密钥或缺失主机白名单；登录 Cookie 自动启用 `Secure`，登录与管理问答入口按客户端限流。部署后必须访问 `/health` 并按运行手册完成权限、备份和回滚检查。
+
 ## 受控任务闭环 API
 
 登录后，助教及以上可创建任务；系统在分派前强制校验学习支持授权、规则版本 `2026.10` 与具名责任人。进入审核前必须关联来源资料、实验记录和代码 commit；导师及以上才可审核、退回修订或确认完成。每次流转均持久化为任务事件。

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sqlite3
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlencode
@@ -16,6 +17,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Upload
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.dependencies import current_user, require_admin
 from app.api.task_router import router as task_router
@@ -24,6 +26,7 @@ from app.services.audit import new_trace_id, write_audit_log
 from app.services.database import connection, initialize_database
 from app.services.document_parser import DocumentParseError, parse_and_store
 from app.services.rag_service import generate_answer, index_knowledge_item, model_config, retrieve, save_deepseek_config
+from app.services.runtime import RateLimitMiddleware, secure_cookie, trusted_hosts, validate_runtime
 from app.services.security import create_access_token, hash_password, password_error, verify_password
 
 
@@ -37,10 +40,13 @@ async def lifespan(_: FastAPI):
     """在服务启动时创建最小表结构；不自动创建弱口令账号。"""
 
     initialize_database()
+    validate_runtime()
     yield
 
 
 app = FastAPI(title="学习支持协作实验室", version="0.1.0", lifespan=lifespan)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts())
+app.add_middleware(RateLimitMiddleware, requests_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "30")))
 app.mount("/static", StaticFiles(directory=str(ROOT / "admin" / "static")), name="static")
 app.include_router(task_router)
 
@@ -68,7 +74,7 @@ def login_response(user: UserView) -> JSONResponse:
 
     token = create_access_token(user.id, user.role)
     response = JSONResponse(content=LoginResponse(access_token=token, user=user).model_dump(mode="json"))
-    response.set_cookie("access_token", token, httponly=True, samesite="lax", secure=False, max_age=8 * 60 * 60)
+    response.set_cookie("access_token", token, httponly=True, samesite="lax", secure=secure_cookie(), max_age=8 * 60 * 60)
     return response
 
 
@@ -103,7 +109,7 @@ def login_form(email: str = Form(...), password: str = Form(...)) -> RedirectRes
         return RedirectResponse(url="/login?error=账号或密码错误", status_code=status.HTTP_303_SEE_OTHER)
     write_audit_log(trace_id=trace_id, user_id=user.id, role=user.role.value, event_type="login", result_status="success", detail="登录成功")
     response = RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
-    response.set_cookie("access_token", create_access_token(user.id, user.role), httponly=True, samesite="lax", secure=False, max_age=8 * 60 * 60)
+    response.set_cookie("access_token", create_access_token(user.id, user.role), httponly=True, samesite="lax", secure=secure_cookie(), max_age=8 * 60 * 60)
     return response
 
 

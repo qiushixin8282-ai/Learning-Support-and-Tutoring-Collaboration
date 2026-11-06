@@ -1,0 +1,15 @@
+.git
+.github
+.gradle-cache
+node_modules
+android
+mobile-shell
+store-assets
+assets
+docs
+tests
+instance
+uploads
+.env
+__pycache__
+*.pyc

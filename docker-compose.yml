@@ -1,0 +1,16 @@
+services:
+  learning-support:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file: .env
+    environment:
+      APP_ENV: production
+      DATABASE_PATH: /app/instance/lab_support.sqlite3
+    volumes:
+      - lab-instance:/app/instance
+      - lab-uploads:/app/uploads
+    restart: unless-stopped
+volumes:
+  lab-instance:
+  lab-uploads:
